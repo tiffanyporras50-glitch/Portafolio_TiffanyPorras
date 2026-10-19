@@ -31,12 +31,10 @@
                             <div class="modal-body">
                                 <div class="mb-3">
                                     <label>[[#{producto.categoria}]]</label>
-                                    <select name="categoria.idCategoria" 
-                                            class="form-select" 
-                                            aria-label="Default select example">
-                                        <option th:each="c : ${categorias}" th:value="${c.idCategoria}">
-                                            [[${c.descripcion}]]
-                                        </option>
+                                    <select id="productoCategoria" name="categoria.idCategoria" class="form-select" required>
+                                        <option th:each="c : ${categorias}"
+                                                th:value="${c.idCategoria}"
+                                                th:text="${c.descripcion}"></option>
                                     </select>
                                 </div>
                                 <div class='mb-3'>
