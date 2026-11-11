@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity6">
+    <head th:replace="~{general/fragmentos :: head}"/>
+    <body>
+        <header th:replace="~{general/fragmentos :: header}"/>
+
+        <!-- Semana 8: formularios de consulta y resultados en tarjetas -->
+        <section th:replace="~{consultas/fragmentos :: consultas}"></section>
+        <section th:replace="~{consultas/fragmentos :: tarjetas(false)}"></section>
+
+        <footer th:replace="~{general/fragmentos :: footer}"/>
+    </body>
+</html>
