@@ -1,17 +1,19 @@
 package Portafolio_TiffanyPorras;
 
+import Portafolio_TiffanyPorras.domain.Ruta;
+import Portafolio_TiffanyPorras.service.RutaService;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -76,40 +78,25 @@ public class ProjectConfig implements WebMvcConfigurer {
         return messageSource;
     }
 
-    /* ===================== Semana 9: Spring Security ===================== */
-
-    //Rutas a las que cualquiera puede entrar, aunque no haya hecho login
-    public static final String[] PUBLIC_URLS = {
-        "/", "/index", "/fav/**", "/carrito/**", "/consultas/**", "/registro/**",
-        "/js/**", "/webjars/**", "/login", "/acceso_denegado"
-    };
-
-    //Rutas solo para el rol ADMIN (crear, modificar, eliminar)
-    public static final String[] ADMIN_URLS = {
-        "/producto/nuevo", "/producto/guardar", "/producto/modificar/**", "/producto/eliminar/**",
-        "/categoria/nuevo", "/categoria/guardar", "/categoria/modificar/**", "/categoria/eliminar/**",
-        "/usuario/nuevo", "/usuario/guardar", "/usuario/modificar/**", "/usuario/eliminar/**"
-    };
-
-    //Rutas para ADMIN o VENDEDOR (solo ver los listados)
-    public static final String[] ADMIN_OR_VENDEDOR_URLS = {
-        "/producto/listado", "/categoria/listado", "/usuario/listado"
-    };
-
-    //Rutas para el rol USUARIO (cliente)
-    public static final String[] USUARIO_URLS = {
-        "/facturar/carrito"
-    };
+    /* ============ Semana 10: Spring Security con la base de datos ============ */
+    //Las rutas ya no están "quemadas" en arreglos de String: se leen de la tabla ruta
+    @Autowired
+    private RutaService rutaService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(request -> request
-                .requestMatchers(PUBLIC_URLS).permitAll()
-                .requestMatchers(ADMIN_URLS).hasRole("ADMIN")
-                .requestMatchers(ADMIN_OR_VENDEDOR_URLS).hasAnyRole("ADMIN", "VENDEDOR")
-                .requestMatchers(USUARIO_URLS).hasRole("USUARIO")
-                .anyRequest().authenticated()
-        ).formLogin(form -> form // Configuración de formulario de login
+        var rutas = rutaService.getRutas();
+        http.authorizeHttpRequests(requests -> {
+            for (Ruta ruta : rutas) {
+                if (ruta.isRequiereRol()) {
+                    requests.requestMatchers(ruta.getRuta()).hasRole(ruta.getRol().getRol());
+                } else {
+                    requests.requestMatchers(ruta.getRuta()).permitAll();
+                }
+            }
+            requests.anyRequest().authenticated();
+        });
+        http.formLogin(form -> form // Configuración de formulario de login
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
                 .defaultSuccessUrl("/", true)
@@ -136,27 +123,12 @@ public class ProjectConfig implements WebMvcConfigurer {
         return new BCryptPasswordEncoder();
     }
 
-    //Usuarios de prueba en memoria (la profe lo reemplaza la siguiente semana por la base de datos)
-    @Bean
-    public UserDetailsService users(PasswordEncoder passwordEncoder) {
-        UserDetails admin = User.builder()
-                .username("juan")
-                .password(passwordEncoder.encode("123"))
-                .roles("ADMIN")
-                .build();
-
-        UserDetails sales = User.builder()
-                .username("rebeca")
-                .password(passwordEncoder.encode("456"))
-                .roles("VENDEDOR")
-                .build();
-
-        UserDetails user = User.builder()
-                .username("pedro")
-                .password(passwordEncoder.encode("789"))
-                .roles("USUARIO")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, sales, user);
+    //Semana 10: los usuarios ya NO se crean en memoria (semana 9),
+    //ahora Spring Security usa UsuarioDetailsService, que los lee de la tabla usuario
+    @Autowired
+    public void configurerGlobal(AuthenticationManagerBuilder build,
+            @Lazy PasswordEncoder passwordEncoder,
+            @Lazy UserDetailsService userDetailsService) throws Exception {
+        build.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
     }
 }
